@@ -1,85 +1,75 @@
-Hooks.on("canvasTearDown", async () => {
+const MODULE_ID = "wm-region-music";
 
-  // Change the playlist name if needed
-  const playlistName = 'Overworld'; 
-  const playlist = game.playlists.getName(playlistName);
-  const moduleId = "wm-region-music";
+/* ---------------- Scene Config UI ---------------- */
+Hooks.on("renderSceneConfig", (app, html) => {
+  const scene = app.document;
+  const enabled = scene.getFlag(MODULE_ID, "useRegionalAudio") ?? false;
 
-  // Get the active scene
-  const scene = canvas.scene;
+  // Prevent duplicate toggle
+  if (html.querySelector(`[name="flags.${MODULE_ID}.useRegionalAudio"]`)) return;
 
-  let track = null;
+  const playlistSelect = html.querySelector('select[name="playlist"]');
+  const playlistField = playlistSelect?.closest(".form-group");
+  if (!playlistField) return;
 
-  if (playlist) {
-    track = playlist.sounds.find(sound => sound.playing === true);
+  const trackSelect = html.querySelector('select[name="playlistSound"]');
+  const trackField = trackSelect?.closest(".form-group");
+
+  // Create toggle above playlist field
+  const wrapper = document.createElement("div");
+  wrapper.className = "form-group";
+  wrapper.innerHTML = `
+    <label>Use Regional Audio</label>
+    <div class="form-fields">
+      <input type="checkbox" name="flags.${MODULE_ID}.useRegionalAudio" ${enabled ? "checked" : ""}>
+    </div>
+    <p class="notes">Hides scene playlist and plays the saved regional track automatically.</p>
+  `;
+  playlistField.before(wrapper);
+
+  const checkbox = wrapper.querySelector("input");
+
+  function updateFields() {
+    const state = checkbox.checked;
+    playlistField.style.display = state ? "none" : "";
+    if (trackField) trackField.style.display = state ? "none" : "";
   }
 
-  // Store the playing track on the scene flag
-  if (scene && track) {
-    await scene.setFlag(moduleId, 'overworldTheme', track.id);
-  }
-
-  // Stop all tracks in the playlist
-  if (playlist) {
-    await playlist.stopAll();
-  }
-
+  updateFields();
+  checkbox.addEventListener("change", updateFields);
 });
 
-Hooks.on("renderSceneConfig", (app, html, data) => {
 
-  const moduleId = "wm-region-music";
-  const scene = data.document;
+/* ---------------- Save Currently Playing Track ---------------- */
+Hooks.on("canvasTearDown", async () => {
+  const scene = canvas.scene;
+  if (!scene) return;
 
-  const enabled = scene.getFlag(moduleId, "useRegionalAudio") ?? false;
-
-  const checkbox = $(`
-  <div class="form-group">
-    <label>Use Regional Themes</label>
-    <div class="form-fields">
-      <input type="checkbox" name="flags.${moduleId}.useRegionalAudio" ${enabled ? "checked" : ""}>
-    </div>
-    <p class="notes">Overrides the playlist settings and uses the regional theme system.</p>
-  </div>
-  `);
-
-  // Insert into Ambience tab
-  const ambienceTab = html.find('.tab[data-tab="ambience"]');
-
-  // Insert inside the audio block
-  ambienceTab.find('.form-group').last().after(checkbox);
-
-  const toggle = html.find(`input[name="flags.${moduleId}.useRegionalAudio"]`);
-
-  const playlistFields = html.find('select[name="playlist"]')
-    .closest('.form-group');
-
-  function updateVisibility() {
-    if (toggle.prop("checked")) {
-      playlistFields.hide();
-    } else {
-      playlistFields.show();
+  // Find the first playlist with a playing track
+  for (const playlist of game.playlists) {
+    const track = playlist.sounds.find(s => s.playing);
+    if (track) {
+      await scene.setFlag(MODULE_ID, "overworldTheme", {
+        playlistId: playlist.id,
+        trackId: track.id
+      });
+      console.log(`[Regional Music] Saved track "${track.name}" for scene "${scene.name}"`);
+      break;
     }
   }
-
-  updateVisibility();
-
-  toggle.on("change", updateVisibility);
-
 });
 
-Hooks.on("canvasReady", async () => {
 
-//Change the playlist name given here to match yours if necessary
-const playlistName = 'Overworld';
-const playlist = game.playlists.getName(playlistName);
+/* ---------------- Pre-Scene Activation Hook ---------------- */
+Hooks.on("preUpdateScene", async (scene, update, options, userId) => {
+  const useRegional = scene.getFlag(MODULE_ID, "useRegionalAudio");
+  const flag = scene.getFlag(MODULE_ID, "overworldTheme");
 
-const scene = canvas.scene;
-const moduleId = "wm-region-music";
+  if (!useRegional || !flag?.playlistId || !flag?.trackId) return;
 
-const track = scene.getFlag(moduleId, 'overworldTheme');
+  // Override the scene playlist to the saved regional playlist
+  update.playlist = flag.playlistId;
 
-if (scene.useRegionalAudio) {playlist.playSound(playlist.sounds.get(track))};
-
-
+  // Force the saved track to play first
+  update.playlistSound = flag.trackId;
 });
