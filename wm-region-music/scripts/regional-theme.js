@@ -77,7 +77,8 @@ const playlist = game.playlists.getName(playlistName);
 const scene = canvas.scene;
 const moduleId = "wm-region-music";
 
-const track = scene.getFlag(moduleId, 'overworldTheme', track.id);
+const track = scene.getFlag(moduleId, 'overworldTheme');
 
-playlist.playSound(playlist.sounds.get(track));
+if (scene.useRegionalAudio) {playlist.playSound(playlist.sounds.get(track))};
+
 });
