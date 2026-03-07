@@ -29,7 +29,7 @@ Hooks.on("canvasTearDown", async () => {
 Hooks.on("renderSceneConfig", (app, html, data) => {
 
   const moduleId = "wm-region-music";
-  const scene = app.object;
+  const scene = data.document;
 
   const enabled = scene.getFlag(moduleId, "useRegionalAudio") ?? false;
 
@@ -80,5 +80,6 @@ const moduleId = "wm-region-music";
 const track = scene.getFlag(moduleId, 'overworldTheme');
 
 if (scene.useRegionalAudio) {playlist.playSound(playlist.sounds.get(track))};
+
 
 });
