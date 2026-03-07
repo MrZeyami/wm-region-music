@@ -1,7 +1,7 @@
 {
   "id": "wm-region-music",
   "title": "World Map Region Music",
-  "version": "0.9.1",
+  "version": "1.0.0",
   "manifest": "https://github.com/MrZeyami/wm-region-music/releases/latest/download/module.json",
   "download": "https://github.com/MrZeyami/wm-region-music/releases/latest/download/module.zip",
   "compatibility": {
