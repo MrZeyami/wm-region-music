@@ -9,10 +9,8 @@
     "verified": "13"
   },
   "description": "<p>Track regional themes on an overworld or world map, so that the correct theme plays when returning to that scene. Works for both Foundry's built-in Regions and MATT, and should be compatible with other modules as well.</p>",
-  "authors": [
-    {
-      "name": "Zeyami",
-      "flags": {}
-    }
-  ],
+  "authors": [{ "name": "Zeyami" }],
+  "esmodules": [
+  "scripts/regional-theme.js"
+]
 }
