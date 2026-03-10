@@ -41,24 +41,34 @@ Hooks.on("renderSceneConfig", (app, html) => {
 
 
 /* ---------------- Save Currently Playing Track ---------------- */
-Hooks.on("canvasTearDown", async () => {
-  const scene = canvas.scene;
-  if (!scene) return;
+Hooks.on("preUpdateScene", async (scene, updateData, options, userId) => {
+
+  if (!game.user.isGM) return;
+
+  // Only run when a scene is being activated
+  if (!updateData.active) return;
+
+  const previousScene = game.scenes.active;
+  if (!previousScene) return;
 
   // Find the first playlist with a playing track
   for (const playlist of game.playlists) {
     const track = playlist.sounds.find(s => s.playing);
     if (track) {
-      await scene.setFlag(MODULE_ID, "overworldTheme", {
+
+      await previousScene.setFlag(MODULE_ID, "overworldTheme", {
         playlistId: playlist.id,
         trackId: track.id
       });
-      console.log(`[Regional Music] Saved track "${track.name}" for scene "${scene.name}"`);
+
+      console.log(
+        `[Regional Music] Saved track "${track.name}" for scene "${previousScene.name}"`
+      );
+
       break;
     }
   }
 });
-
 
 /* ---------------- Pre-Scene Activation Hook ---------------- */
 Hooks.on("preUpdateScene", async (scene, update, options, userId) => {
@@ -72,4 +82,5 @@ Hooks.on("preUpdateScene", async (scene, update, options, userId) => {
 
   // Force the saved track to play first
   update.playlistSound = flag.trackId;
+
 });
