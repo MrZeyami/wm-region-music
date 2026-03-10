@@ -44,6 +44,7 @@ Hooks.on("renderSceneConfig", (app, html) => {
 Hooks.on("preUpdateScene", async (scene, updateData, options, userId) => {
 
   if (!game.user.isGM) return;
+  if (!game.user.isActiveGM) return;
 
   // Only run when a scene is being activated
   if (!updateData.active) return;
@@ -70,17 +71,18 @@ Hooks.on("preUpdateScene", async (scene, updateData, options, userId) => {
   }
 });
 
-/* ---------------- Pre-Scene Activation Hook ---------------- */
-Hooks.on("preUpdateScene", async (scene, update, options, userId) => {
+/* ---------------- Scene Activated ---------------- */
+Hooks.on("updateScene", async (scene, update, options, userId) => {
+
+  if (!game.user.isActiveGM) return;
+  if (!update.active) return;
+
   const useRegional = scene.getFlag(MODULE_ID, "useRegionalAudio");
   const flag = scene.getFlag(MODULE_ID, "overworldTheme");
 
   if (!useRegional || !flag?.playlistId || !flag?.trackId) return;
 
-  // Override the scene playlist to the saved regional playlist
-  update.playlist = flag.playlistId;
-
-  // Force the saved track to play first
+  update.playlist = flag.playlistId; 
   update.playlistSound = flag.trackId;
 
 });
