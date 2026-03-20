@@ -19,11 +19,10 @@ Hooks.on("renderSceneConfig", (app, html) => {
   const wrapper = document.createElement("div");
   wrapper.className = "form-group";
   wrapper.innerHTML = `
-    <label>Use Regional Audio</label>
+    <label title="Use Region-based audio for overworld maps or similar use-cases.">Use Regional Audio</label>
     <div class="form-fields">
       <input type="checkbox" name="flags.${MODULE_ID}.useRegionalAudio" ${enabled ? "checked" : ""}>
     </div>
-    <p class="notes">Hides scene playlist and plays the saved regional track automatically.</p>
   `;
   playlistField.before(wrapper);
 
@@ -41,14 +40,14 @@ Hooks.on("renderSceneConfig", (app, html) => {
 
 
 /* ---------------- Save Currently Playing Track ---------------- */
-Hooks.on("preUpdateScene", async (scene, updateData, options, userId) => {
+Hooks.on("preUpdateScene", async (scene, delta, options, userId) => {
 
+  // Lock the module to running the update only for the GM who activated the scene
   if (!game.user.isGM) return;
   if (!game.user.isActiveGM) return;
 
   // Only run when a scene is being activated
-  if (!updateData.active) return;
-
+  if (!delta.active) return;
   const previousScene = game.scenes.active;
   if (!previousScene) return;
 
@@ -65,24 +64,24 @@ Hooks.on("preUpdateScene", async (scene, updateData, options, userId) => {
       console.log(
         `[Regional Music] Saved track "${track.name}" for scene "${previousScene.name}"`
       );
-
-      break;
+    } else {
+      console.log("[Regional Music] Error: track not found.")
     }
   }
 });
 
 /* ---------------- Scene Activated ---------------- */
-Hooks.on("updateScene", async (scene, update, options, userId) => {
+Hooks.on("updateScene", async (scene, delta, options, userId) => {
 
   if (!game.user.isActiveGM) return;
-  if (!update.active) return;
+  if (!delta.active) return;
 
-  const useRegional = scene.getFlag(MODULE_ID, "useRegionalAudio");
+  const enabled = scene.getFlag(MODULE_ID, "useRegionalAudio");
   const flag = scene.getFlag(MODULE_ID, "overworldTheme");
 
-  if (!useRegional || !flag?.playlistId || !flag?.trackId) return;
+  if (!enabled || !flag?.playlistId || !flag?.trackId) return;
 
-  update.playlist = flag.playlistId; 
-  update.playlistSound = flag.trackId;
+  delta.playlist = flag.playlistId; 
+  delta.playlistSound = flag.trackId;
 
 });
