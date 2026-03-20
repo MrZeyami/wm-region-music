@@ -1,11 +1,12 @@
 const MODULE_ID = "wm-region-music";
 
+let pendingSceneAudio = null;
+
 /* ---------------- Scene Config UI ---------------- */
 Hooks.on("renderSceneConfig", (app, html) => {
   const scene = app.document;
   const enabled = scene.getFlag(MODULE_ID, "useRegionalAudio") ?? false;
 
-  // Prevent duplicate toggle
   if (html.querySelector(`[name="flags.${MODULE_ID}.useRegionalAudio"]`)) return;
 
   const playlistSelect = html.querySelector('select[name="playlist"]');
@@ -15,7 +16,6 @@ Hooks.on("renderSceneConfig", (app, html) => {
   const trackSelect = html.querySelector('select[name="playlistSound"]');
   const trackField = trackSelect?.closest(".form-group");
 
-  // Create toggle above playlist field
   const wrapper = document.createElement("div");
   wrapper.className = "form-group";
   wrapper.innerHTML = `
@@ -24,6 +24,7 @@ Hooks.on("renderSceneConfig", (app, html) => {
       <input type="checkbox" name="flags.${MODULE_ID}.useRegionalAudio" ${enabled ? "checked" : ""}>
     </div>
   `;
+
   playlistField.before(wrapper);
 
   const checkbox = wrapper.querySelector("input");
@@ -40,48 +41,71 @@ Hooks.on("renderSceneConfig", (app, html) => {
 
 
 /* ---------------- Save Currently Playing Track ---------------- */
-Hooks.on("preUpdateScene", async (scene, delta, options, userId) => {
+Hooks.on("preUpdateScene", async (scene, delta) => {
 
-  // Lock the module to running the update only for the GM who activated the scene
-  if (!game.user.isGM) return;
   if (!game.user.isActiveGM) return;
-
-  // Only run when a scene is being activated
   if (!delta.active) return;
+
   const previousScene = game.scenes.active;
   if (!previousScene) return;
 
-  // Find the first playlist with a playing track
   for (const playlist of game.playlists) {
     const track = playlist.sounds.find(s => s.playing);
-    if (track) {
+    if (!track) continue;
 
-      await previousScene.setFlag(MODULE_ID, "overworldTheme", {
-        playlistId: playlist.id,
-        trackId: track.id
-      });
+    await previousScene.setFlag(MODULE_ID, "overworldTheme", {
+      playlistId: playlist.id,
+      trackId: track.id
+    });
 
-      console.log(
-        `[Regional Music] Saved track "${track.name}" for scene "${previousScene.name}"`
-      );
-    } else {
-      console.log("[Regional Music] Error: track not found.");
-    }
+    console.log(`[Regional Music] Saved "${track.name}" for "${previousScene.name}"`);
+    break;
   }
+
 });
 
+
 /* ---------------- Scene Activated ---------------- */
-Hooks.on("updateScene", async (scene, delta, options, userId) => {
+Hooks.on("updateScene", (scene, delta) => {
 
   if (!game.user.isActiveGM) return;
   if (!delta.active) return;
+
+  /* Stop currently playing tracks */
+  for (const playlist of game.playlists) {
+    playlist.stopAll();
+  }
 
   const enabled = scene.getFlag(MODULE_ID, "useRegionalAudio");
   const flag = scene.getFlag(MODULE_ID, "overworldTheme");
 
-  if (!enabled || !flag?.playlistId || !flag?.trackId) return;
+  if (!enabled || !flag.playlistId || !flag.trackId) return;
 
-  delta.playlist = flag.playlistId; 
-  delta.playlistSound = flag.trackId;
+  pendingSceneAudio = {
+    sceneId: scene.id,
+    playlistId: flag.playlistId,
+    trackId: flag.trackId
+  };
+
+});
+
+
+/* ---------------- Apply Scene Audio ---------------- */
+Hooks.on("canvasReady", async () => {
+
+  if (!game.user.isActiveGM) return;
+  if (!pendingSceneAudio) return;
+
+  const scene = canvas.scene;
+  if (!scene || scene.id !== pendingSceneAudio.sceneId) return;
+
+  await scene.update({
+    playlist: pendingSceneAudio.playlistId,
+    playlistSound: pendingSceneAudio.trackId
+  });
+
+  console.log(`[Regional Music] Applied audio to scene "${scene.name}"`);
+
+  pendingSceneAudio = null;
 
 });
