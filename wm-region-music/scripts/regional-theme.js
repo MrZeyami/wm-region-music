@@ -65,7 +65,7 @@ Hooks.on("preUpdateScene", async (scene, delta, options, userId) => {
         `[Regional Music] Saved track "${track.name}" for scene "${previousScene.name}"`
       );
     } else {
-      console.log("[Regional Music] Error: track not found.")
+      console.log("[Regional Music] Error: track not found.");
     }
   }
 });
